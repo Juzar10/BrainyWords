@@ -24,6 +24,10 @@ class WordViewModel(
     private val batchSize = 5
     private val threshold = 3
 
+    // Track if we have a limited word set (like only 1 word)
+    private var isLimitedWordSet = false
+    private var totalAvailableWords = 0
+
     init {
         loadInitialWords()
     }
@@ -36,6 +40,13 @@ class WordViewModel(
                 words.clear()
                 words.addAll(initialWords)
                 windowStart = 0
+
+                // Check if we have limited words
+                totalAvailableWords = initialWords.size
+                if (totalAvailableWords < windowSize) {
+                    isLimitedWordSet = true
+                    hasMoreWords = false // No more words to load
+                }
             } catch (e: Exception) {
                 hasMoreWords = false
             } finally {
@@ -45,6 +56,12 @@ class WordViewModel(
     }
 
     fun onPageChanged(currentPage: Int) {
+        // If we have a limited word set, use circular navigation
+        if (isLimitedWordSet && words.isNotEmpty()) {
+            // No need to load more words, just cycle through existing ones
+            return
+        }
+
         val relativeIndex = currentPage - windowStart
         if (relativeIndex >= words.size - threshold && !isLoading && hasMoreWords) {
             loadNextWords()
@@ -54,6 +71,8 @@ class WordViewModel(
     }
 
     private fun loadNextWords() {
+        if (isLimitedWordSet) return // Don't load more if we have limited set
+
         viewModelScope.launch {
             isLoading = true
             try {
@@ -68,9 +87,18 @@ class WordViewModel(
                     words.addAll(newWords)
                 } else {
                     hasMoreWords = false
+                    // Check if we now have a limited set
+                    if (words.size < windowSize) {
+                        isLimitedWordSet = true
+                        totalAvailableWords = words.size
+                    }
                 }
             } catch (e: Exception) {
                 hasMoreWords = false
+                if (words.size < windowSize) {
+                    isLimitedWordSet = true
+                    totalAvailableWords = words.size
+                }
             } finally {
                 isLoading = false
             }
@@ -78,6 +106,8 @@ class WordViewModel(
     }
 
     private fun loadPreviousWords() {
+        if (isLimitedWordSet) return // Don't load more if we have limited set
+
         viewModelScope.launch {
             isLoading = true
             try {
@@ -94,5 +124,34 @@ class WordViewModel(
                 isLoading = false
             }
         }
+    }
+
+    // Helper function to get the word for infinite paging
+    fun getWordForPage(page: Int): Word? {
+        if (words.isEmpty()) return null
+
+        return if (isLimitedWordSet) {
+            // Cycle through available words
+            val wordIndex = page % words.size
+            words[wordIndex]
+        } else {
+            // Use sliding window logic
+            val relativeIndex = page - windowStart
+            if (relativeIndex in words.indices) {
+                words[relativeIndex]
+            } else {
+                null
+            }
+        }
+    }
+
+    // Helper function to check if we should show loading for a page
+    fun shouldShowLoading(page: Int): Boolean {
+        if (isLimitedWordSet) {
+            return false // Never show loading for limited word sets
+        }
+
+        val relativeIndex = page - windowStart
+        return relativeIndex !in words.indices
     }
 }

@@ -63,8 +63,7 @@ fun WordApp() {
 
     // Determine the color scheme based on current word
     val colorScheme = if (words.isNotEmpty()) {
-        val relativeIndex = currentPage - viewModel.windowStart
-        ColorSchemes.getSchemeForIndex(relativeIndex.coerceIn(0, words.size - 1))
+        ColorSchemes.getSchemeForIndex(currentPage % words.size)
     } else {
         ColorSchemes.getSchemeForIndex(0)
     }
@@ -101,18 +100,30 @@ fun WordApp() {
                 state = pagerState,
                 modifier = Modifier.padding(innerPadding)
             ) { page ->
-                val relativeIndex = page - viewModel.windowStart
-                if (relativeIndex in words.indices) {
-                    WordScreen(
-                        word = words[relativeIndex],
-                        colorScheme = ColorSchemes.getSchemeForIndex(relativeIndex),
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    LoadingScreen(
-                        colorScheme = colorScheme,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                val word = viewModel.getWordForPage(page)
+                val shouldShowLoading = viewModel.shouldShowLoading(page)
+
+                when {
+                    word != null -> {
+                        WordScreen(
+                            word = word,
+                            colorScheme = ColorSchemes.getSchemeForIndex(page % words.size),
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    shouldShowLoading -> {
+                        LoadingScreen(
+                            colorScheme = colorScheme,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    else -> {
+                        // Fallback for any edge cases
+                        LoadingScreen(
+                            colorScheme = colorScheme,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }
