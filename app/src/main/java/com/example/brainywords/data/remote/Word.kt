@@ -25,7 +25,8 @@ class WordRemoteDataSource {
                 synonyms = doc.get("synonyms") as? List<String> ?: emptyList(),
                 quote = doc.getString("quote") ?: "",
                 author = doc.getString("author") ?: "",
-                source = doc.getString("source") ?: ""
+                source = doc.getString("source") ?: "",
+                viewCount = doc.getLong("viewCount")?.toInt() ?: 0
             )
         }
     }

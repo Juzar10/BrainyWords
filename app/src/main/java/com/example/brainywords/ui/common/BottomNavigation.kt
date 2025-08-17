@@ -23,8 +23,8 @@ import com.example.brainywords.ui.theme.ColorScheme
 @Composable
 fun BottomNavigationBar(
     currentIndex: Int,
-    totalWords: Int,
     colorScheme: ColorScheme,
+    viewCount: Int,
     onPrevious: () -> Unit,
     onNext: () -> Unit
 ) {
@@ -61,7 +61,7 @@ fun BottomNavigationBar(
 
             // Center Text
             Text(
-                text = "${currentIndex + 1} / $totalWords",
+                text = "Repeated $viewCount",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
             )

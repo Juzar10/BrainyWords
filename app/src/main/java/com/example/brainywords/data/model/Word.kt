@@ -7,5 +7,6 @@ data class Word(
     val synonyms: List<String>,
     val quote: String,
     val author: String,
-    val source: String
+    val source: String,
+    val viewCount: Int
 )

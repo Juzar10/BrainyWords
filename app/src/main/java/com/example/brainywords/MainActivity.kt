@@ -77,10 +77,13 @@ fun WordApp() {
             modifier = Modifier.fillMaxSize(),
             containerColor = Color.Transparent,
             bottomBar = {
+                // Get the current word to access its viewCount
+                val currentWord = viewModel.getWordForPage(currentPage)
+
                 BottomNavigationBar(
                     currentIndex = currentPage,
-                    totalWords = -1, // infinite
                     colorScheme = colorScheme,
+                    viewCount = currentWord?.viewCount ?: 0, // Get viewCount from current word
                     onPrevious = {
                         if (currentPage > 0) {
                             coroutineScope.launch {
