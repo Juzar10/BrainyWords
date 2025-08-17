@@ -1,6 +1,5 @@
 package com.example.brainywords.data.remote
 
-import android.util.Log
 import com.example.brainywords.data.model.Word
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
