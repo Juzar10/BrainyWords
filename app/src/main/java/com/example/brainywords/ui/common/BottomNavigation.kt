@@ -69,15 +69,10 @@ fun BottomNavigationBar(
             // Right Arrow
             IconButton(
                 onClick = onNext,
-                enabled = currentIndex < totalWords - 1
             ) {
                 Icon(
                     imageVector = Icons.Default.ArrowForward,
                     contentDescription = "Next",
-                    tint = if (currentIndex < totalWords - 1)
-                        Color.Black
-                    else
-                        Color.Black.copy(alpha = 0.38f)
                 )
             }
         }
