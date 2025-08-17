@@ -14,7 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.brainywords.R
-import com.example.brainywords.data.Word
+import com.example.brainywords.data.model.Word
 import com.example.brainywords.helpers.buildHighlightedQuote
 import com.example.brainywords.ui.componenets.SynonymSection
 import com.example.brainywords.ui.theme.ColorScheme

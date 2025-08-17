@@ -1,15 +1,6 @@
 package com.example.brainywords.data
+import com.example.brainywords.data.model.Word
 import kotlinx.coroutines.delay
-
-data class Word(
-    val id: Int = 0,
-    val word: String,
-    val definition: String,
-    val synonyms: List<String>,
-    val quote: String,
-    val author: String,
-    val source: String
-)
 
 object WordData {
     private const val BATCH_SIZE = 5

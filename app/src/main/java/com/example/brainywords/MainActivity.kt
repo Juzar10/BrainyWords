@@ -23,8 +23,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.brainywords.data.Word
-import com.example.brainywords.data.WordData
+import com.example.brainywords.data.remote.WordRemoteDataSource
+import com.example.brainywords.data.repository.WordRepository
+import com.example.brainywords.domain.viewmodals.WordViewModel
 import com.example.brainywords.ui.common.BottomNavigationBar
 import com.example.brainywords.ui.screens.WordScreen
 import com.example.brainywords.ui.theme.BrainyWordsTheme
@@ -46,116 +47,28 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun WordApp() {
-    // State to hold dynamically loaded words with sliding window
-    var words by remember { mutableStateOf<List<Word>>(emptyList()) }
-    var windowStart by remember { mutableStateOf(0) } // Track the starting index of our window
-    var isLoading by remember { mutableStateOf(true) }
-    var hasMoreWords by remember { mutableStateOf(true) }
+    // Repository
+    val repository = remember { WordRepository(WordRemoteDataSource()) }
+    val viewModel = remember { WordViewModel(repository) }
 
-    val windowSize = 15 // Keep only 15 words in memory at a time
-    val batchSize = 5   // Load 5 words at a time
-
-    // Load initial batch when composable is first created
-    LaunchedEffect(Unit) {
-        try {
-            val initialWords = WordData.getInitialBatch()
-            words = initialWords
-            windowStart = 0
-            isLoading = false
-        } catch (e: Exception) {
-            isLoading = false
-            hasMoreWords = false
-        }
-    }
-
-    val maxPages = if (hasMoreWords) Int.MAX_VALUE else windowStart + words.size
-    val pagerState = rememberPagerState(
-        initialPage = 0,
-        pageCount = { maxPages }
-    )
+    val words = viewModel.words
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { Int.MAX_VALUE })
     val coroutineScope = rememberCoroutineScope()
+    val currentPage = pagerState.currentPage
 
-    val currentWordIndex = pagerState.currentPage
-
-    // Calculate which word to show from our sliding window
-    val actualWordIndex = if (words.isNotEmpty()) {
-        val relativeIndex = currentWordIndex - windowStart
-        if (relativeIndex >= 0 && relativeIndex < words.size) {
-            relativeIndex
-        } else {
-            // Handle edge cases
-            maxOf(0, minOf(relativeIndex, words.size - 1))
-        }
-    } else 0
-
-    val colorScheme = ColorSchemes.getSchemeForIndex(actualWordIndex)
-
-    // Sliding window management
-    LaunchedEffect(currentWordIndex, words.size) {
-        if (words.isEmpty()) return@LaunchedEffect
-
-        val relativeIndex = currentWordIndex - windowStart
-        val threshold = 3
-
-        // Load more words if approaching the end of current window
-        if (relativeIndex >= words.size - threshold && !isLoading && hasMoreWords) {
-            coroutineScope.launch {
-                isLoading = true
-                try {
-                    val newWords = WordData.getNextBatchSync(windowStart + words.size)
-                    if (newWords.isNotEmpty()) {
-                        val updatedWords = words + newWords
-
-                        // Implement sliding window: remove old words if we exceed window size
-                        if (updatedWords.size > windowSize) {
-                            val wordsToRemove = updatedWords.size - windowSize
-                            words = updatedWords.drop(wordsToRemove)
-                            windowStart += wordsToRemove
-                        } else {
-                            words = updatedWords
-                        }
-
-                    } else {
-                        hasMoreWords = false
-                    }
-                } catch (e: Exception) {
-                    hasMoreWords = false
-                } finally {
-                    isLoading = false
-                }
-            }
-        }
-
-        // Load previous words if going backward and we're near the beginning
-        else if (relativeIndex <= threshold && windowStart > 0 && !isLoading) {
-            coroutineScope.launch {
-                isLoading = true
-                try {
-                    val prevBatchStart = maxOf(0, windowStart - batchSize)
-                    val prevWords = (prevBatchStart until windowStart).map { index ->
-                        WordData.generateWordAtIndex(index)
-                    }
-
-                    if (prevWords.isNotEmpty()) {
-                        val updatedWords = prevWords + words
-
-                        // Maintain window size by removing from the end
-                        if (updatedWords.size > windowSize) {
-                            words = updatedWords.take(windowSize)
-                        } else {
-                            words = updatedWords
-                        }
-                        windowStart = prevBatchStart
-                    }
-                } catch (e: Exception) {
-                } finally {
-                    isLoading = false
-                }
-            }
-        }
+    // Notify ViewModel when page changes
+    LaunchedEffect(currentPage) {
+        viewModel.onPageChanged(currentPage)
     }
 
-    // Rest of your UI code remains the same...
+    // Determine the color scheme based on current word
+    val colorScheme = if (words.isNotEmpty()) {
+        val relativeIndex = currentPage - viewModel.windowStart
+        ColorSchemes.getSchemeForIndex(relativeIndex.coerceIn(0, words.size - 1))
+    } else {
+        ColorSchemes.getSchemeForIndex(0)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -166,19 +79,19 @@ fun WordApp() {
             containerColor = Color.Transparent,
             bottomBar = {
                 BottomNavigationBar(
-                    currentIndex = currentWordIndex,
-                    totalWords = -1, // Always infinite with sliding window
+                    currentIndex = currentPage,
+                    totalWords = -1, // infinite
                     colorScheme = colorScheme,
                     onPrevious = {
-                        if (currentWordIndex > 0) {
+                        if (currentPage > 0) {
                             coroutineScope.launch {
-                                pagerState.animateScrollToPage(currentWordIndex - 1)
+                                pagerState.animateScrollToPage(currentPage - 1)
                             }
                         }
                     },
                     onNext = {
                         coroutineScope.launch {
-                            pagerState.animateScrollToPage(currentWordIndex + 1)
+                            pagerState.animateScrollToPage(currentPage + 1)
                         }
                     },
                 )
@@ -187,26 +100,25 @@ fun WordApp() {
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.padding(innerPadding)
-            ) { index ->
-                if (words.isEmpty()) {
-                    LoadingScreen(colorScheme = colorScheme)
+            ) { page ->
+                val relativeIndex = page - viewModel.windowStart
+                if (relativeIndex in words.indices) {
+                    WordScreen(
+                        word = words[relativeIndex],
+                        colorScheme = ColorSchemes.getSchemeForIndex(relativeIndex),
+                        modifier = Modifier.fillMaxSize()
+                    )
                 } else {
-                    val relativeIndex = index - windowStart
-                    if (relativeIndex >= 0 && relativeIndex < words.size) {
-                        WordScreen(
-                            word = words[relativeIndex],
-                            colorScheme = ColorSchemes.getSchemeForIndex(relativeIndex),
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        // Show loading or placeholder for words outside current window
-                        LoadingScreen(colorScheme = colorScheme)
-                    }
+                    LoadingScreen(
+                        colorScheme = colorScheme,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }
     }
 }
+
 @Composable
 fun LoadingScreen(
     colorScheme: ColorScheme,
