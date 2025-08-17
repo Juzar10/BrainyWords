@@ -1,6 +1,8 @@
 package com.example.brainywords.data.remote
 
+import android.util.Log
 import com.example.brainywords.data.model.Word
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
@@ -28,6 +30,28 @@ class WordRemoteDataSource {
                 source = doc.getString("source") ?: "",
                 viewCount = doc.getLong("viewCount")?.toInt() ?: 0
             )
+        }
+    }
+
+    suspend fun incrementViewCount(wordId: Int): Boolean {
+        return try {
+            // Find the document with the matching word ID
+            val querySnapshot = wordsCollection
+                .whereEqualTo("id", wordId)
+                .get()
+                .await()
+
+            if (querySnapshot.documents.isNotEmpty()) {
+                val document = querySnapshot.documents.first()
+
+                // Increment the viewCount field
+                document.reference.update("viewCount", FieldValue.increment(1)).await()
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
         }
     }
 }

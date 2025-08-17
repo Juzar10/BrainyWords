@@ -4,13 +4,31 @@ import com.example.brainywords.data.model.Word
 import com.example.brainywords.data.remote.WordRemoteDataSource
 
 class WordRepository(
-    private val remote: WordRemoteDataSource
+    private val remoteDataSource: WordRemoteDataSource
 ) {
-    suspend fun getInitialWords(batchSize: Int = 15): List<Word> {
-        return remote.fetchWords(startIndex = 0, batchSize = batchSize)
+    private val _words = mutableListOf<Word>()
+    val words: List<Word> get() = _words
+
+    suspend fun fetchWords(startIndex: Int, batchSize: Int): List<Word> {
+        val newWords = remoteDataSource.fetchWords(startIndex, batchSize)
+        _words.addAll(newWords)
+        return newWords
     }
 
-    suspend fun getNextWords(offset: Int, batchSize: Int = 5): List<Word> {
-        return remote.fetchWords(startIndex = offset, batchSize = batchSize)
+    suspend fun incrementViewCount(wordId: Int): Boolean {
+        val success = remoteDataSource.incrementViewCount(wordId)
+
+        if (success) {
+            // Update local cache as well
+            val wordIndex = _words.indexOfFirst { it.id == wordId }
+            if (wordIndex != -1) {
+                val updatedWord = _words[wordIndex].copy(
+                    viewCount = _words[wordIndex].viewCount + 1
+                )
+                _words[wordIndex] = updatedWord
+            }
+        }
+
+        return success
     }
 }

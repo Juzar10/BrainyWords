@@ -5,32 +5,29 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+
 import com.example.brainywords.data.remote.WordRemoteDataSource
 import com.example.brainywords.data.repository.WordRepository
 import com.example.brainywords.domain.viewmodals.WordViewModel
 import com.example.brainywords.ui.common.BottomNavigationBar
+import com.example.brainywords.ui.screens.LoadingScreen
 import com.example.brainywords.ui.screens.WordScreen
 import com.example.brainywords.ui.theme.BrainyWordsTheme
-import com.example.brainywords.ui.theme.ColorScheme
 import com.example.brainywords.ui.theme.ColorSchemes
+
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -129,30 +126,6 @@ fun WordApp() {
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun LoadingScreen(
-    colorScheme: ColorScheme,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(48.dp)
-            )
-            Text(
-                text = "Loading words...",
-                style = MaterialTheme.typography.bodyLarge,
-            )
         }
     }
 }
